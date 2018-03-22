@@ -1,0 +1,75 @@
+{
+  "project_info": {
+    "project_number": "94461269947",
+    "firebase_url": "https://shifty-d8720.firebaseio.com",
+    "project_id": "shifty-d8720",
+    "storage_bucket": "shifty-d8720.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94461269947:android:76234ffd6bcc4a2d",
+        "android_client_info": {
+          "package_name": "com.crimsoft.shifty"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "94461269947-4ibsledfdtfr6o0cq6etg76tblol761b.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "94461269947-j5gt9qpinljjtusnf3bs4maucgk90h7t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.crimsoft.shifty",
+            "certificate_hash": "7133979548bc7e8cec4b8288f573a8a719d6a912"
+          }
+        },
+        {
+          "client_id": "94461269947-svattqmirbai6tbmgkmdl8uotu0ht5c8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.crimsoft.shifty",
+            "certificate_hash": "fd68a85db51a42ef79d7965764b2af7e90580140"
+          }
+        },
+        {
+          "client_id": "94461269947-t7erc6fjpaqp456sne870idhavkvhhud.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.crimsoft.shifty",
+            "certificate_hash": "435993017f904a99b3f27c8587aa11ec55a471e0"
+          }
+        },
+        {
+          "client_id": "94461269947-4m1k5dhrbl0ibej10fcu1vhn5nodnejc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrtagv3ZrPxNlIp9sgemzNLE514XL86f0"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "94461269947-4ibsledfdtfr6o0cq6etg76tblol761b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
