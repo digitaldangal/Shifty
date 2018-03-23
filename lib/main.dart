@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:shifty/app_text_styles.dart';
 import 'package:shifty/app_themes.dart';
@@ -9,21 +6,13 @@ import 'package:shifty/bottom_navigation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-final FirebaseAuth _auth = FirebaseAuth.instance;
-
-final GoogleSignIn _googleSignIn = new GoogleSignIn(
-  scopes: [
-    'email',
-    'https://www.googleapis.com/auth/contacts.readonly',
-  ],
-);
-
 void main() => runApp(new MyApp());
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
+      title: 'Shifty',
       theme: AppThemes.light,
       home: new ShiftyHome(),
     );
@@ -48,71 +37,50 @@ const List<String> tabNames = const <String>[
 ];
 
 class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
-  /*Future<String> _message = new Future<String>.value('');
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = new GoogleSignIn();
+  FirebaseUser _user;
+  int _screen;
+  ScrollPhysics _scrollPhysics;
 
-  Future<String> _testSignInAnonymously() async {
-    final FirebaseUser user = await _auth.signInAnonymously();
-    assert(user != null);
-    assert(user.isAnonymous);
-    assert(!user.isEmailVerified);
-    assert(await user.getIdToken() != null);
-    if (Platform.isIOS) {
-      // Anonymous auth doesn't show up as a provider on iOS
-      assert(user.providerData.isEmpty);
-    } else if (Platform.isAndroid) {
-      // Anonymous auth does show up as a provider on Android
-      assert(user.providerData.length == 1);
-      assert(user.providerData[0].providerId == 'firebase');
-      assert(user.providerData[0].uid != null);
-      assert(user.providerData[0].displayName == null);
-      assert(user.providerData[0].photoUrl == null);
-      assert(user.providerData[0].email == null);
-    }
-
-    final FirebaseUser currentUser = await _auth.currentUser();
-    assert(user.uid == currentUser.uid);
-
-    return 'signInAnonymously succeeded: $user';
-  }
-
-  Future<String> _testSignInWithGoogle() async {
-    final GoogleSignInAccount googleUser = await _googleSignIn.signIn();
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
-    final FirebaseUser user = await _auth.signInWithGoogle(
+  Future<FirebaseUser> _handleGoogleSignIn() async {
+    GoogleSignInAccount googleUser = await _googleSignIn.signIn();
+    GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    _user = await _auth.signInWithGoogle(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
-    assert(user.email != null);
-    assert(user.displayName != null);
-    assert(!user.isAnonymous);
-    assert(await user.getIdToken() != null);
 
-    final FirebaseUser currentUser = await _auth.currentUser();
-    assert(user.uid == currentUser.uid);
-
-    return 'signInWithGoogle succeeded: $user';
-  }*/
-
-  GoogleSignInAccount _currentUser;
-  String _contactText;
-
-  int _screen;
-  ScrollPhysics _scrollPhysics;
+    return _user;
+  }
 
   @override
   initState() {
     super.initState();
 
-    _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount account) {
+    _auth.onAuthStateChanged.listen((FirebaseUser user) {
       setState(() {
-        _currentUser = account;
+        _user = user;
       });
-      if (_currentUser != null) {
-        _handleGetContact();
-      }
     });
-    _googleSignIn.signInSilently();
+
+    _auth.currentUser().then((FirebaseUser user) {
+      _user = user;
+    });
+
+    _googleSignIn.signInSilently().then((GoogleSignInAccount googleAccount) {
+      googleAccount.authentication
+          .then((GoogleSignInAuthentication googleAuth) {
+        _auth
+            .signInWithGoogle(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        )
+            .then((FirebaseUser user) {
+          _user = user;
+        });
+      });
+    });
 
     _screen = 0;
 
@@ -121,72 +89,14 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
         : _scrollPhysics = const NeverScrollableScrollPhysics();
   }
 
-  Future<Null> _handleGetContact() async {
-    setState(() {
-      _contactText = "Loading contact info...";
-    });
-    final http.Response response = await http.get(
-      'https://people.googleapis.com/v1/people/me/connections'
-          '?requestMask.includeField=person.names',
-      headers: await _currentUser.authHeaders,
-    );
-    if (response.statusCode != 200) {
-      setState(() {
-        _contactText = "People API gave a ${response.statusCode} "
-            "response. Check logs for details.";
-      });
-      print('People API ${response.statusCode} response: ${response.body}');
-      return;
-    }
-    final Map<String, dynamic> data = json.decode(response.body);
-    final String namedContact = _pickFirstNamedContact(data);
-    setState(() {
-      if (namedContact != null) {
-        _contactText = "I see you know $namedContact!";
-      } else {
-        _contactText = "No contacts to display.";
-      }
-    });
-  }
-
-  String _pickFirstNamedContact(Map<String, dynamic> data) {
-    final List<Map<String, dynamic>> connections = data['connections'];
-    final Map<String, dynamic> contact = connections?.firstWhere(
-      (Map<String, dynamic> contact) => contact['names'] != null,
-      orElse: () => null,
-    );
-    if (contact != null) {
-      final Map<String, dynamic> name = contact['names'].firstWhere(
-        (Map<String, dynamic> name) => name['displayName'] != null,
-        orElse: () => null,
-      );
-      if (name != null) {
-        return name['displayName'];
-      }
-    }
-    return null;
-  }
-
-  Future<Null> _handleSignIn() async {
-    try {
-      await _googleSignIn.signIn();
-    } catch (error) {
-      print(error);
-    }
-  }
-
-  Future<Null> _handleSignOut() async {
-    _googleSignIn.disconnect();
-  }
-
   @override
   void dispose() {
     super.dispose();
   }
 
   Widget _buildBody() {
-    if (_currentUser != null) {
-      print(_currentUser.toString());
+    if (_user != null) {
+      print(_auth.toString());
       return new TabBarView(
         physics: _scrollPhysics,
         children: new List<Widget>.generate(tabNames.length, (int index) {
@@ -196,23 +106,16 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
                 child: new Column(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: <Widget>[
-                    new ListTile(
-                      leading: new GoogleUserCircleAvatar(
-                        identity: _currentUser,
-                      ),
-                      title: new Text(_currentUser.displayName),
-                      subtitle: new Text(_currentUser.email),
-                    ),
-                    const Text("Signed in successfully."),
-                    new Text(_contactText),
-                    new RaisedButton(
-                      child: const Text('SIGN OUT'),
-                      onPressed: _handleSignOut,
-                    ),
-                    new RaisedButton(
-                      child: const Text('REFRESH'),
-                      onPressed: _handleGetContact,
-                    ),
+                    new FlatButton(
+                        onPressed: () async {
+                          await _auth.signOut();
+                          await _googleSignIn.disconnect();
+                          setState(() {
+                            //_handleSignOut();
+                          });
+                        },
+                        child: new Text('Sign out')),
+                    new Text(_user.displayName),
                   ],
                 ),
               );
@@ -238,7 +141,13 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
           const Text("You are not currently signed in."),
           new RaisedButton(
             child: const Text('SIGN IN'),
-            onPressed: _handleSignIn,
+            onPressed: () {
+              setState(() {
+                _handleGoogleSignIn()
+                    .then((FirebaseUser user) => print(user))
+                    .catchError((e) => print(e));
+              });
+            },
           ),
         ],
       );
@@ -246,43 +155,12 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) {/*
-    return new Scaffold(
-      appBar: new AppBar(
-        title: new Text('test'),
-      ),
-      body: new Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          new MaterialButton(
-              child: const Text('Test signInAnonymously'),
-              onPressed: () {
-                setState(() {
-                  _message = _testSignInAnonymously();
-                });
-              }),
-          new MaterialButton(
-              child: const Text('Test signInWithGoogle'),
-              onPressed: () {
-                setState(() {
-                  _message = _testSignInWithGoogle();
-                });
-              }),
-          new FutureBuilder<String>(
-              future: _message,
-              builder: (_, AsyncSnapshot<String> snapshot) {
-                return new Text(snapshot.data ?? '',
-                    style: const TextStyle(
-                        color: const Color.fromARGB(255, 0, 155, 0)));
-              }),
-        ],
-      ),
-    );*/
+  Widget build(BuildContext context) {
     return new DefaultTabController(
       length: tabNames.length,
       child: new Scaffold(
         body: _buildBody(),
-        bottomNavigationBar: _currentUser != null
+        bottomNavigationBar: _auth != null
             ? new Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
