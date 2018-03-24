@@ -43,6 +43,9 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   final _auth = FirebaseAuth.instance;
   FirebaseUser _currentUser;
 
+  Animation<double> _logoAnimation;
+  AnimationController _logoAnimationController;
+
   int _screen;
   ScrollPhysics _scrollPhysics;
 
@@ -70,6 +73,18 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   initState() {
     super.initState();
 
+    // Splash Logo Animation
+    _logoAnimationController = new AnimationController(
+        duration: const Duration(milliseconds: 1000), vsync: this);
+    _logoAnimation =
+        new Tween(begin: 0.0, end: 1.0).animate(_logoAnimationController)
+          ..addListener(() {
+            setState(() {
+              // the state that has changed here is the animation object’s value
+            });
+          });
+    _logoAnimationController.forward();
+
     /*_ensureLoggedIn().then((FirebaseUser user) {
       setState(() {
         _currentUser = user;
@@ -96,6 +111,8 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _logoAnimationController.dispose();
+
     super.dispose();
   }
 
@@ -160,8 +177,33 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
       color: Theme.of(context).backgroundColor,
       child: new Center(
         child: new Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            new Container(
+                padding: new EdgeInsetsDirectional.only(bottom: 30.0),
+                child: new Column(
+                  children: <Widget>[
+                    new Opacity(
+                      opacity: _logoAnimation.value == null
+                          ? 0
+                          : _logoAnimation.value,
+                      child: new Image(
+                        //TODO: Wait for image to load, then start animation
+                        image: new AssetImage('assets/images/logo.png'),
+                        height: 150.0,
+                      ),
+                    ),
+                    new Opacity(
+                      opacity: _logoAnimation.value == null
+                          ? 0
+                          : _logoAnimation.value,
+                      child: new Text(
+                        'Shifty',
+                        style: AppTextStyles.splashLogo,
+                      ),
+                    ),
+                  ],
+                )),
             new FlatButton(
                 onPressed: () async {
                   setState(() {
@@ -209,27 +251,6 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
                   new FlatButton(
                       onPressed: () async {
                         setState(() {
-                          _handleEmailSignIn();
-                        });
-                      },
-                      child: new Text('Sign In (Email)')),
-                  new FlatButton(
-                      onPressed: () async {
-                        setState(() {
-                          _handleGoogleSignIn();
-                        });
-                      },
-                      child: new Text('Sign In (Google)')),
-                  new FlatButton(
-                      onPressed: () async {
-                        setState(() {
-                          _handleFacebookSignIn();
-                        });
-                      },
-                      child: new Text('Sign In (Facebook)')),
-                  new FlatButton(
-                      onPressed: () async {
-                        setState(() {
                           _handleSignOut();
                         });
                       },
@@ -259,11 +280,58 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildBody(bool isLogged) {
+  Widget _buildBody() {
     Widget screen;
-    isLogged ? screen = _showMainScreen() : screen = _showSplashScreen();
+
+    _currentUser != null
+        ? screen = _showMainScreen()
+        : screen = _showSplashScreen();
 
     return screen;
+  }
+
+  Widget _buildBottomNavigation() {
+    Widget botNav;
+
+    _currentUser != null
+        ? botNav = new Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              new AnimatedCrossFade(
+                firstChild: new Material(
+                  color: Theme.of(context).primaryColor,
+                  child: new TabBar(
+                    isScrollable: true,
+                    labelStyle: AppTextStyles.tabBarLabel,
+                    tabs: new List.generate(tabNames.length, (index) {
+                      return new Tab(text: tabNames[index].toUpperCase());
+                    }),
+                  ),
+                ),
+                secondChild: new Container(),
+                crossFadeState: botNavItemTabs[_screen]
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+                duration: const Duration(milliseconds: 300),
+              ),
+              new BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                currentIndex: _screen,
+                onTap: (int index) {
+                  setState(() {
+                    _screen = index;
+                    botNavItemTabs[_screen]
+                        ? _scrollPhysics = const ScrollPhysics()
+                        : _scrollPhysics = const NeverScrollableScrollPhysics();
+                  });
+                },
+                items: botNavItems,
+              ),
+            ],
+          )
+        : botNav = null;
+    return botNav;
   }
 
   @override
@@ -271,47 +339,7 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
     return new DefaultTabController(
       length: tabNames.length,
       child: new Scaffold(
-        body: _showMainScreen(),
-        bottomNavigationBar: 1 != null
-            ? new Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  new AnimatedCrossFade(
-                    firstChild: new Material(
-                      color: Theme.of(context).primaryColor,
-                      child: new TabBar(
-                        isScrollable: true,
-                        labelStyle: AppTextStyles.tabBarLabel,
-                        tabs: new List.generate(tabNames.length, (index) {
-                          return new Tab(text: tabNames[index].toUpperCase());
-                        }),
-                      ),
-                    ),
-                    secondChild: new Container(),
-                    crossFadeState: botNavItemTabs[_screen]
-                        ? CrossFadeState.showFirst
-                        : CrossFadeState.showSecond,
-                    duration: const Duration(milliseconds: 300),
-                  ),
-                  new BottomNavigationBar(
-                    type: BottomNavigationBarType.fixed,
-                    currentIndex: _screen,
-                    onTap: (int index) {
-                      setState(() {
-                        _screen = index;
-                        botNavItemTabs[_screen]
-                            ? _scrollPhysics = const ScrollPhysics()
-                            : _scrollPhysics =
-                                const NeverScrollableScrollPhysics();
-                      });
-                    },
-                    items: botNavItems,
-                  ),
-                ],
-              )
-            : null,
-      ),
+          body: _buildBody(), bottomNavigationBar: _buildBottomNavigation()),
     );
   }
 }
