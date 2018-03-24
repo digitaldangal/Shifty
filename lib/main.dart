@@ -4,6 +4,7 @@ import 'package:shifty/app_text_styles.dart';
 import 'package:shifty/app_themes.dart';
 import 'package:shifty/bottom_navigation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() => runApp(new MyApp());
@@ -37,49 +38,53 @@ const List<String> tabNames = const <String>[
 ];
 
 class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = new GoogleSignIn();
-  FirebaseUser _user;
+  final _googleSignIn = new GoogleSignIn();
+  var _facebookLogin = new FacebookLogin();
+  final _auth = FirebaseAuth.instance;
+  FirebaseUser _currentUser;
+
   int _screen;
   ScrollPhysics _scrollPhysics;
 
-  Future<FirebaseUser> _handleGoogleSignIn() async {
-    GoogleSignInAccount googleUser = await _googleSignIn.signIn();
-    GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-    _user = await _auth.signInWithGoogle(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+  Future<FirebaseUser> _ensureLoggedIn() async {
+    GoogleSignInAccount user = _googleSignIn.currentUser;
+    if (user == null) user = await _googleSignIn.signInSilently();
+    if (user == null) {
+      await _googleSignIn.signIn();
+      //analytics.logLogin();
+    }
 
-    return _user;
+    if (await _auth.currentUser() == null) {
+      GoogleSignInAuthentication credentials =
+          await _googleSignIn.currentUser.authentication;
+      await _auth.signInWithGoogle(
+        idToken: credentials.idToken,
+        accessToken: credentials.accessToken,
+      );
+    }
+
+    return _auth.currentUser();
   }
 
   @override
   initState() {
     super.initState();
 
+    /*_ensureLoggedIn().then((FirebaseUser user) {
+      setState(() {
+        _currentUser = user;
+      });
+    });*/
+
     _auth.onAuthStateChanged.listen((FirebaseUser user) {
       setState(() {
-        _user = user;
+        _currentUser = user;
       });
-    });
-
-    _auth.currentUser().then((FirebaseUser user) {
-      _user = user;
-    });
-
-    _googleSignIn.signInSilently().then((GoogleSignInAccount googleAccount) {
-      googleAccount.authentication
-          .then((GoogleSignInAuthentication googleAuth) {
-        _auth
-            .signInWithGoogle(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        )
-            .then((FirebaseUser user) {
-          _user = user;
+      if (_currentUser != null) {
+        setState(() {
+          _currentUser = user;
         });
-      });
+      }
     });
 
     _screen = 0;
@@ -94,64 +99,171 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Widget _buildBody() {
-    if (_user != null) {
-      print(_auth.toString());
-      return new TabBarView(
-        physics: _scrollPhysics,
-        children: new List<Widget>.generate(tabNames.length, (int index) {
-          switch (_screen) {
-            case 0:
-              return new Center(
-                child: new Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: <Widget>[
-                    new FlatButton(
-                        onPressed: () async {
-                          await _auth.signOut();
-                          await _googleSignIn.disconnect();
-                          setState(() {
-                            //_handleSignOut();
-                          });
-                        },
-                        child: new Text('Sign out')),
-                    new Text(_user.displayName),
-                  ],
-                ),
-              );
-            case 1:
-              return new Center(
-                child: new Text('Second screen, ${tabNames[index]}'),
-              );
-            case 2:
-              return new Center(
-                child: new Text('Third screen'),
-              );
-            case 3:
-              return new Center(
-                child: new Text('Settings Screen'),
-              );
-          }
-        }),
-      );
-    } else {
-      return new Column(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: <Widget>[
-          const Text("You are not currently signed in."),
-          new RaisedButton(
-            child: const Text('SIGN IN'),
-            onPressed: () {
-              setState(() {
-                _handleGoogleSignIn()
-                    .then((FirebaseUser user) => print(user))
-                    .catchError((e) => print(e));
-              });
-            },
-          ),
-        ],
-      );
+  Future<Null> _handleEmailSignIn() async {
+    try {
+      _auth.signInWithEmailAndPassword(
+          email: 'argamanza@gmail.com', password: 'melikson24');
+    } catch (error) {
+      print(error);
     }
+  }
+
+  Future<Null> _handleGoogleSignIn() async {
+    try {
+      await _googleSignIn.signIn();
+      GoogleSignInAuthentication credentials =
+          await _googleSignIn.currentUser.authentication;
+      await _auth.signInWithGoogle(
+        idToken: credentials.idToken,
+        accessToken: credentials.accessToken,
+      );
+    } catch (error) {
+      print(error);
+    }
+  }
+
+  Future<Null> _handleFacebookSignIn() async {
+    try {
+      FacebookLoginResult result =
+          await _facebookLogin.logInWithReadPermissions(['email']);
+
+      switch (result.status) {
+        case FacebookLoginStatus.loggedIn:
+          print('Facebook login: ' + result.accessToken.userId);
+          await _auth.signInWithFacebook(accessToken: result.accessToken.token);
+          print(_currentUser.uid +
+              ' | ' +
+              _currentUser.displayName +
+              ' | ' +
+              _currentUser.photoUrl);
+          // Logged in UI
+          break;
+        case FacebookLoginStatus.cancelledByUser:
+          print('Facebook login cancelled by user.');
+          break;
+        case FacebookLoginStatus.error:
+          print('Facebook login error: ' + result.errorMessage);
+          break;
+      }
+    } catch (error) {
+      print(error);
+    }
+  }
+
+  Future<Null> _handleSignOut() async {
+    await _googleSignIn.disconnect();
+    await _auth.signOut();
+  }
+
+  Widget _showSplashScreen() {
+    return new Container(
+      color: Theme.of(context).backgroundColor,
+      child: new Center(
+        child: new Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: <Widget>[
+            new FlatButton(
+                onPressed: () async {
+                  setState(() {
+                    _handleEmailSignIn();
+                  });
+                },
+                child: new Text('Sign In (Email)')),
+            new FlatButton(
+                onPressed: () async {
+                  setState(() {
+                    _handleGoogleSignIn();
+                  });
+                },
+                child: new Text('Sign In (Google)')),
+            new FlatButton(
+                onPressed: () async {
+                  setState(() {
+                    _handleFacebookSignIn();
+                  });
+                },
+                child: new Text('Sign In (Facebook)')),
+            new FlatButton(
+                onPressed: () async {
+                  setState(() {
+                    _handleSignOut();
+                  });
+                },
+                child: new Text('Sign Out')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _showMainScreen() {
+    return new TabBarView(
+      physics: _scrollPhysics,
+      children: new List<Widget>.generate(tabNames.length, (int index) {
+        switch (_screen) {
+          case 0:
+            return new Center(
+              child: new Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: <Widget>[
+                  new FlatButton(
+                      onPressed: () async {
+                        setState(() {
+                          _handleEmailSignIn();
+                        });
+                      },
+                      child: new Text('Sign In (Email)')),
+                  new FlatButton(
+                      onPressed: () async {
+                        setState(() {
+                          _handleGoogleSignIn();
+                        });
+                      },
+                      child: new Text('Sign In (Google)')),
+                  new FlatButton(
+                      onPressed: () async {
+                        setState(() {
+                          _handleFacebookSignIn();
+                        });
+                      },
+                      child: new Text('Sign In (Facebook)')),
+                  new FlatButton(
+                      onPressed: () async {
+                        setState(() {
+                          _handleSignOut();
+                        });
+                      },
+                      child: new Text('Sign Out')),
+                  new Text(_currentUser != null
+                      ? _currentUser.uid +
+                          ', Provider: ' +
+                          _currentUser.providerId
+                      : 'No user'),
+                ],
+              ),
+            );
+          case 1:
+            return new Center(
+              child: new Text('Second screen, ${tabNames[index]}'),
+            );
+          case 2:
+            return new Center(
+              child: new Text('Third screen'),
+            );
+          case 3:
+            return new Center(
+              child: new Text('Settings Screen'),
+            );
+        }
+      }),
+    );
+  }
+
+  Widget _buildBody(bool isLogged) {
+    Widget screen;
+    isLogged ? screen = _showMainScreen() : screen = _showSplashScreen();
+
+    return screen;
   }
 
   @override
@@ -159,8 +271,8 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
     return new DefaultTabController(
       length: tabNames.length,
       child: new Scaffold(
-        body: _buildBody(),
-        bottomNavigationBar: _auth != null
+        body: _showMainScreen(),
+        bottomNavigationBar: 1 != null
             ? new Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
