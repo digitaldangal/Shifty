@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppThemes {
   static final ThemeData light = new ThemeData(
-      primarySwatch: Colors.indigo,
-      primaryColor: Colors.indigo,
+      primarySwatch: Colors.blue,
+      primaryColor: Colors.white,
       backgroundColor: Colors.red,
       fontFamily: 'Assistant',
       indicatorColor: Colors.deepOrange,

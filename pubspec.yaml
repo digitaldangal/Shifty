@@ -42,7 +42,10 @@ flutter:
   # https://flutter.io/assets-and-images/#from-packages
 
   assets:
-    - assets/images/logo.png
+    - assets/images/splash_screen/background.png
+    - assets/images/splash_screen/logo.png
+    - assets/images/splash_screen/google_button.png
+    - assets/images/splash_screen/facebook_button.png
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a
@@ -65,6 +68,13 @@ flutter:
   # see https://flutter.io/custom-fonts/#from-packages
 
   fonts:
+      - family: Roboto
+        fonts:
+          - asset: assets/fonts/Roboto/Roboto-Regular.ttf
+          - asset: assets/fonts/Roboto/Roboto-Medium.ttf
+            weight: 500
+          - asset: assets/fonts/Roboto/Roboto-Bold.ttf
+            weight: 700
       - family: Assistant
         fonts:
           - asset: assets/fonts/Assistant/Assistant-Regular.ttf

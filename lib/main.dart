@@ -6,6 +6,7 @@ import 'package:shifty/bottom_navigation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shifty/font_awesome_icon_data.dart';
 
 void main() => runApp(new MyApp());
 
@@ -173,10 +174,19 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   }
 
   Widget _showSplashScreen() {
+    var _loginEmailController = new TextEditingController();
+    var _loginPasswordController = new TextEditingController();
+
     return new Container(
-      color: Theme.of(context).backgroundColor,
+      decoration: new BoxDecoration(
+          color: Colors.red,
+          image: new DecorationImage(
+              fit: BoxFit.fill,
+              image: new AssetImage(
+                  'assets/images/splash_screen/background.png'))),
       child: new Center(
-        child: new Column(
+        child: new Flex(
+          direction: Axis.vertical,
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             new Container(
@@ -189,8 +199,9 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
                           : _logoAnimation.value,
                       child: new Image(
                         //TODO: Wait for image to load, then start animation
-                        image: new AssetImage('assets/images/logo.png'),
-                        height: 150.0,
+                        image: new AssetImage(
+                            'assets/images/splash_screen/logo.png'),
+                        height: 100.0,
                       ),
                     ),
                     new Opacity(
@@ -204,34 +215,221 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
                     ),
                   ],
                 )),
-            new FlatButton(
+            new Container(
+              child: new Column(
+                children: <Widget>[
+                  new Container(
+                    width: 250.0,
+                    padding: new EdgeInsets.only(bottom: 10.0),
+                    child: new TextField(
+                      controller: _loginEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: new InputDecoration(
+                        border: new UnderlineInputBorder(
+                            borderSide: new BorderSide(color: Colors.red)),
+                        filled: false,
+                        fillColor: Colors.black26,
+                        contentPadding:
+                            new EdgeInsets.fromLTRB(7.0, 7.0, 7.0, 7.0),
+                        prefixIcon: new Container(
+                          child: new Icon(
+                            FontAwesomeIcons.envelope,
+                            size: 17.0,
+                          ),
+                          padding: new EdgeInsets.fromLTRB(0.0, 0.0, 10.0, 0.0),
+                        ),
+                        hintText: 'Email Address',
+                        hintStyle: AppTextStyles.loginTextFieldHint,
+                      ),
+                      style: AppTextStyles.loginTextField,
+                    ),
+                  ),
+                  new Container(
+                    width: 250.0,
+                    child: new TextField(
+                      controller: _loginPasswordController,
+                      decoration: new InputDecoration(
+                        border: new UnderlineInputBorder(),
+                        filled: false,
+                        fillColor: Colors.black26,
+                        contentPadding:
+                            new EdgeInsets.fromLTRB(7.0, 7.0, 7.0, 7.0),
+                        prefixIcon: new Container(
+                          child: new Icon(
+                            FontAwesomeIcons.key,
+                            size: 17.0,
+                          ),
+                          padding: new EdgeInsets.fromLTRB(0.0, 0.0, 10.0, 0.0),
+                        ),
+                        hintText: 'Password',
+                        hintStyle: AppTextStyles.loginTextFieldHint,
+                      ),
+                      obscureText: true,
+                      style: AppTextStyles.loginTextField,
+                    ),
+                  ),
+                  new Container(
+                    padding: new EdgeInsets.only(top: 30.0, bottom: 30.0),
+                    child: new RaisedButton(
+                        color: Colors.blue[600],
+                        shape: new StadiumBorder(),
+                        child: new Text(
+                          'Sign In',
+                          style: AppTextStyles.loginButton,
+                        ),
+                        onPressed: () {
+                          print('Email: ' +
+                              _loginEmailController.text +
+                              ' Pass: ' +
+                              _loginPasswordController.text);
+                        }),
+                  ),
+                  new Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      new Container(
+                        width: 70.0,
+                        padding: new EdgeInsets.only(right: 10.0),
+                        child: new Divider(
+                          color: Colors.white,
+                        ),
+                      ),
+                      new Text(
+                        'OR',
+                        style: new TextStyle(
+                            color: Colors.white, fontFamily: 'Assistant'),
+                      ),
+                      new Container(
+                        width: 70.0,
+                        padding: new EdgeInsets.only(left: 10.0),
+                        child: new Divider(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  new Container(
+                    padding: new EdgeInsets.only(top: 20.0),
+                    child: new Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        new Container(
+                          height: 55.0,
+                          width: 155.0,
+                          margin: new EdgeInsets.only(right: 20.0),
+                          child: new RaisedButton(
+                            elevation: 5.0,
+                            highlightElevation: 0.0,
+                            padding: new EdgeInsets.all(0.0),
+                            color: new Color.fromARGB(255, 221, 75, 57),
+                            child: new Icon(
+                              FontAwesomeIcons.google,
+                              size: 25.0,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {},
+                          ),
+                        ),
+                        new Container(
+                          height: 55.0,
+                          width: 155.0,
+                          child: new RaisedButton(
+                            elevation: 5.0,
+                            highlightElevation: 0.0,
+                            padding: new EdgeInsets.all(0.0),
+                            color: new Color.fromARGB(255, 59, 89, 152),
+                            child: new Icon(
+                              FontAwesomeIcons.facebook_f,
+                              size: 25.0,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {},
+                          ),
+                        )
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+            /*new FlatButton(
                 onPressed: () async {
                   setState(() {
                     _handleEmailSignIn();
                   });
                 },
                 child: new Text('Sign In (Email)')),
-            new FlatButton(
-                onPressed: () async {
-                  setState(() {
-                    _handleGoogleSignIn();
-                  });
-                },
-                child: new Text('Sign In (Google)')),
-            new FlatButton(
-                onPressed: () async {
-                  setState(() {
-                    _handleFacebookSignIn();
-                  });
-                },
-                child: new Text('Sign In (Facebook)')),
+            new RaisedButton(
+              onPressed: () async {
+                setState(() {
+                  _handleGoogleSignIn();
+                });
+              },
+              child: new Container(
+                height: 40.0,
+                width: 195.0,
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    new Image(
+                      image: new AssetImage(
+                          'assets/images/splash_screen/google_button.png'),
+                      height: 22.0,
+                    ),
+                    new Container(
+                      height: 30.0,
+                      width: 1.0,
+                      color: Colors.red[900],
+                    ),
+                    new Text(
+                      'Sign in with Google',
+                      style: AppTextStyles.splashButtonGoogle,
+                    )
+                  ],
+                ),
+              ),
+              color: Colors.white,
+            ),
+            new RaisedButton(
+              onPressed: () async {
+                setState(() {
+                  _handleGoogleSignIn();
+                });
+              },
+              child: new Container(
+                height: 40.0,
+                width: 217.5,
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    new Image(
+                      image: new AssetImage(
+                          'assets/images/splash_screen/facebook_button.png'),
+                      height: 22.0,
+                    ),
+                    new Container(
+                      height: 30.0,
+                      width: 1.0,
+                      color: Colors.white,
+                    ),
+                    new Text(
+                      'Sign in with Facebook',
+                      style: AppTextStyles.splashButtonFacebook,
+                    )
+                  ],
+                ),
+              ),
+              color: new Color.fromARGB(255, 59, 89, 152),
+            ),
             new FlatButton(
                 onPressed: () async {
                   setState(() {
                     _handleSignOut();
                   });
                 },
-                child: new Text('Sign Out')),
+                child: new Text('Sign Out')),*/
           ],
         ),
       ),

@@ -3,7 +3,10 @@ library font_awesome_icon_data;
 import 'package:flutter/widgets.dart';
 
 class FontAwesomeIcons {
-  static const IconData bell = const _IconDataSolid(0xf0f3);
+  static const IconData envelope = const _IconDataSolid(0xf0e0);
+  static const IconData key = const _IconDataSolid(0xf084);
+  static const IconData google = const _IconDataBrands(0xf1a0);
+  static const IconData facebook_f = const _IconDataBrands(0xf39e);
 
   static const IconData sign_in = const _IconDataRegular(0xf090);
   static const IconData sign_out = const _IconDataRegular(0xf08b);
