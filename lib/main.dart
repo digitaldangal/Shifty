@@ -10,16 +10,42 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:shifty/font_awesome_icon_data.dart';
 
 final analytics = new FirebaseAnalytics();
+
+ThemeData _currentTheme = AppThemes.loginScreen;
+
 final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
-void main() => runApp(new MyApp());
+void main() => runApp(new App());
 
-class MyApp extends StatelessWidget {
+class App extends StatefulWidget {
+  @override
+  _AppState createState() => new _AppState();
+}
+
+class _AppState extends State<App> {
+  @override
+  void initState() {
+    final _auth = FirebaseAuth.instance;
+    super.initState();
+
+    _auth.onAuthStateChanged.listen((FirebaseUser user) {
+      if (user != null) {
+        setState(() {
+          _currentTheme = AppThemes.mainScreen;
+        });
+      } else {
+        setState(() {
+          _currentTheme = AppThemes.loginScreen;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
       title: 'Shifty',
-      theme: AppThemes.loginScreen,
+      theme: _currentTheme,
       home: new ShiftyHome(),
     );
   }
@@ -51,6 +77,8 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   Animation<double> _logoAnimation;
   AnimationController _logoAnimationController;
 
+  bool _loadingIndicator;
+
   int _screen;
   ScrollPhysics _scrollPhysics;
 
@@ -78,9 +106,11 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   initState() {
     super.initState();
 
+    _loadingIndicator = false;
+
     // Splash Logo Animation
     _logoAnimationController = new AnimationController(
-        duration: const Duration(milliseconds: 1000), vsync: this);
+        duration: const Duration(milliseconds: 2000), vsync: this);
     _logoAnimation =
         new Tween(begin: 0.0, end: 1.0).animate(_logoAnimationController)
           ..addListener(() {
@@ -121,41 +151,62 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<Null> _handleEmailSignIn(String _email, String _password) async {
-    if (_email.isEmpty || _password.isEmpty) {
-      _scaffoldKey.currentState.removeCurrentSnackBar();
-      _scaffoldKey.currentState.showSnackBar(new SnackBar(
-        backgroundColor: Colors.blue[700],
-        duration: new Duration(seconds: 10),
-        content: new Container(
-          margin: new EdgeInsets.all(0.0),
-          padding: new EdgeInsets.all(0.0),
-          child: new Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              new Text(
-                'Please enter a valid Email address and Password.',
-                style: AppTextStyles.snackbarText,
-              )
-            ],
-          ),
+  void _showSnackBar(String _message) {
+    _scaffoldKey.currentState.removeCurrentSnackBar();
+    _scaffoldKey.currentState.showSnackBar(new SnackBar(
+      backgroundColor: Colors.blue[700],
+      duration: new Duration(seconds: 5),
+      content: new Container(
+        margin: new EdgeInsets.all(0.0),
+        padding: new EdgeInsets.all(0.0),
+        child: new Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            new Text(
+              _message,
+              style: AppTextStyles.snackbarText,
+            )
+          ],
         ),
-        action: new SnackBarAction(
-            label: 'DISMISS',
-            onPressed: () {
-              _scaffoldKey.currentState.hideCurrentSnackBar();
-            }),
-      ));
+      ),
+      action: new SnackBarAction(
+          label: 'DISMISS',
+          onPressed: () {
+            _scaffoldKey.currentState.hideCurrentSnackBar();
+          }),
+    ));
+  }
+
+  Future<Null> _handleEmailSignIn(String _email, String _password) async {
+    if (_email.isEmpty ||
+        _password.isEmpty ||
+        !_email.contains(new RegExp('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+\$'))) {
+      _showSnackBar('Please enter a valid Email address and Password.');
     } else {
       try {
-        _auth.signInWithEmailAndPassword(email: _email, password: _password);
+        setState(() {
+          _loadingIndicator = true;
+        });
+        _auth
+            .signInWithEmailAndPassword(email: _email, password: _password)
+            .timeout(const Duration(minutes: 1), onTimeout: () {
+          _showSnackBar('Login timed out, please try again in a few minutes.');
+          setState(() {
+            _loadingIndicator = false;
+          });
+        }).catchError((error) {
+          print(error.toString());
+          setState(() {
+            _loadingIndicator = false;
+          });
+        });
       } catch (error) {
         print(error);
+      } finally {
+        analytics.logLogin();
+        analytics.logEvent(name: 'email_login');
       }
-
-      analytics.logLogin();
-      analytics.logEvent(name: 'email_login');
     }
   }
 
@@ -203,6 +254,7 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
           break;
       }
     } catch (error) {
+      print(error);
       _scaffoldKey.currentState.showSnackBar(new SnackBar(
           duration: new Duration(seconds: 10),
           action: new SnackBarAction(
@@ -223,10 +275,10 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
     await _auth.signOut();
   }
 
-  Widget _showLoginScreen() {
-    var _loginEmailController = new TextEditingController();
-    var _loginPasswordController = new TextEditingController();
+  var _loginEmailController = new TextEditingController();
+  var _loginPasswordController = new TextEditingController();
 
+  Widget _showLoginScreen() {
     return new Container(
       decoration: new BoxDecoration(
           color: Colors.red,
@@ -325,6 +377,7 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
                             hintStyle: AppTextStyles.loginTextFieldHint,
                           ),
                           obscureText: true,
+                          keyboardType: TextInputType.text,
                           style: AppTextStyles.loginTextField,
                         ),
                       ),
@@ -590,10 +643,25 @@ class _ShiftyHomeState extends State<ShiftyHome> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return new DefaultTabController(
       length: tabNames.length,
-      child: new Scaffold(
-          key: _scaffoldKey,
-          body: _buildBody(),
-          bottomNavigationBar: _buildBottomNavigation()),
+      child: new Stack(
+        children: <Widget>[
+          new Scaffold(
+              key: _scaffoldKey,
+              body: _buildBody(),
+              bottomNavigationBar: _buildBottomNavigation()),
+          _loadingIndicator
+              ? new Container(
+                  color: Colors.black54,
+                  child: new Center(
+                    child: new CircularProgressIndicator(),
+                  ),
+                )
+              : new Container(
+                  height: 0.0,
+                  width: 0.0,
+                )
+        ],
+      ),
     );
   }
 }
